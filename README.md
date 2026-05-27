@@ -134,7 +134,28 @@ npx prisma db push          # o: npx prisma migrate deploy
 npm run db:seed
 ```
 
-### 3. Desarrollo
+### 3. Node.js 20 (requerido)
+
+El proyecto necesita **Node ≥ 20** (Next.js 14 y AWS SDK). Si `npm run dev` falla con *Node.js 18.15* o `nvm: command not found`:
+
+**Opción A — Homebrew (recomendado en Mac, sin nvm):**
+
+```bash
+brew install node@20
+npm run dev
+```
+
+El script `scripts/dev.sh` usa automáticamente `/opt/homebrew/opt/node@20/bin` (o `/usr/local/opt/node@20` en Intel).
+
+Para usar Node 20 en **todas** las terminales, añade a `~/.zshrc`:
+
+```bash
+export PATH="/opt/homebrew/opt/node@20/bin:$PATH"
+```
+
+**Opción B — nvm** (si lo prefieres): instala [nvm](https://github.com/nvm-sh/nvm), luego `nvm install 20 && nvm use`.
+
+### 4. Desarrollo
 
 ```bash
 npm run dev
@@ -182,6 +203,6 @@ Abrir [http://localhost:3000](http://localhost:3000).
 
 ## Requisitos
 
-- Node.js ≥ 18.17
+- Node.js ≥ 20
 - PostgreSQL 14+ (Supabase recomendado)
 - Redis opcional (colas y cache)
