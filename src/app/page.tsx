@@ -1,58 +1,22 @@
-"use client";
+import Link from "next/link";
+import { appConfig } from "@/config/app";
+import { Button } from "@/components/ui/button";
 
-import { useCallback, useEffect, useState } from "react";
-import TicketForm from "@/components/TicketForm";
-import TicketList from "@/components/TicketList";
-
-type Ticket = {
-  id: number;
-  titulo: string;
-  descripcion: string;
-  solicitante: string;
-  email: string;
-  categoria: string;
-  prioridad: string;
-  estado: string;
-  createdAt: string;
-};
-
-export default function Home() {
-  const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const loadTickets = useCallback(async () => {
-    try {
-      const res = await fetch("/api/tickets");
-      if (res.ok) {
-        setTickets(await res.json());
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadTickets();
-  }, [loadTickets]);
-
-  function handleCreated(ticket: Ticket) {
-    setTickets((prev) => [ticket, ...prev]);
-  }
-
+export default function HomePage() {
   return (
-    <main className="page">
-      <header className="hero">
-        <h1>Tickets UC</h1>
-        <p>Registra solicitudes de soporte en la base de datos.</p>
-      </header>
-
-      <div className="layout">
-        <TicketForm onCreated={handleCreated} />
-        {loading ? (
-          <p className="loading">Cargando tickets...</p>
-        ) : (
-          <TicketList tickets={tickets} />
-        )}
+    <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
+      <p className="text-sm text-muted-foreground">UC CHRISTUS</p>
+      <h1 className="text-2xl font-semibold">{appConfig.name}</h1>
+      <div className="flex flex-wrap justify-center gap-3">
+        <Button asChild>
+          <Link href="/portal/new">Portal cliente</Link>
+        </Button>
+        <Button variant="outline" asChild>
+          <Link href="/agent/tickets">Panel agente</Link>
+        </Button>
+        <Button variant="ghost" asChild>
+          <Link href="/login">Iniciar sesión</Link>
+        </Button>
       </div>
     </main>
   );

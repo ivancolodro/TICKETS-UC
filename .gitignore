@@ -3,8 +3,16 @@ node_modules
 .next
 .env
 .env.local
+.env.*.local
 *.db
 *.db-journal
 prisma/*.db
-prisma/dev.db
 .vercel
+tsconfig.tsbuildinfo
+
+# Storage local
+/storage
+
+# IDE
+.idea
+.vscode

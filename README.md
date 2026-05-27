@@ -1,86 +1,187 @@
-# Tickets UC
+# UC CHRISTUS — Sistema de Tickets de Soporte
 
-Formulario web para registrar tickets de soporte. Base de datos en **Supabase** (PostgreSQL) y hosting en **Vercel**.
+Plataforma multicanal de gestión de tickets (web, email, API) para UC CHRISTUS.
 
-## Desarrollo local
+**Producción:** [https://tickets-uc.vercel.app](https://tickets-uc.vercel.app)  
+**Repositorio:** [github.com/ivancolodro/TICKETS-UC](https://github.com/ivancolodro/TICKETS-UC)
 
-1. Crea un proyecto en [Supabase](https://supabase.com).
-2. Copia las variables de conexión:
+## Stack
+
+| Capa | Tecnología |
+|------|------------|
+| Frontend | Next.js 14 (App Router), TypeScript, Tailwind CSS, shadcn/ui |
+| Backend | Next.js API Routes |
+| Base de datos | PostgreSQL (Supabase) + Prisma ORM |
+| Auth | NextAuth.js (credenciales, Google OAuth, 2FA TOTP) |
+| Email | Nodemailer + React Email |
+| Cache | Upstash Redis |
+| Colas | BullMQ |
+| Storage | Local (dev) / S3-compatible (prod) |
+| Deploy | Vercel |
+
+## Estado del proyecto
+
+| Módulo | Estado |
+|--------|--------|
+| Arquitectura base + Prisma | ✅ |
+| **Tickets** (CRUD, portal, API, panel agente) | ✅ |
+| **Usuarios y acceso** (auth, RBAC, admin) | ✅ |
+| Formularios personalizados | 🔲 |
+| Email / notificaciones | 🔲 |
+| SLA (motor completo) | 🔲 |
+| Automatización | 🔲 |
+| Base de conocimiento | 🔲 |
+| Reportes | 🔲 |
+| Integraciones API (ApiKey) | 🔲 |
+
+## Rutas principales
+
+| Ruta | Descripción |
+|------|-------------|
+| `/` | Inicio (enlaces a portal y agente) |
+| `/login` | Inicio de sesión (credenciales + 2FA + Google) |
+| `/portal/new` | Formulario web — crear ticket sin cuenta |
+| `/portal/tickets/[token]` | Seguimiento público por token |
+| `/agent/tickets` | Lista y gestión de tickets |
+| `/agent/tickets/new` | Creación manual por agente |
+| `/agent/tickets/[id]` | Detalle, respuestas, notas, fusionar |
+| `/admin/agents` | CRUD agentes |
+| `/admin/departments` | CRUD departamentos |
+| `/admin/teams` | CRUD equipos |
+| `/admin/customers` | Clientes y historial |
+
+## API relevante
+
+| Endpoint | Uso |
+|----------|-----|
+| `POST /api/portal/tickets` | Canal portal cliente |
+| `POST /api/v1/tickets` | Canal API REST |
+| `GET/POST /api/tickets` | Panel agente (autenticado) |
+| `GET /api/tickets/public/[token]` | Acceso sin login |
+| `GET/POST /api/admin/agents` | Gestión de agentes |
+| `GET/POST /api/admin/departments` | Departamentos |
+| `GET/POST /api/admin/teams` | Equipos |
+| `GET /api/admin/customers` | Clientes |
+| `POST /api/auth/validate` | Validación login (2FA, bloqueo) |
+| `POST /api/auth/2fa/setup` | Configurar 2FA |
+| `GET /api/health` | Health check |
+
+## Roles y permisos (RBAC)
+
+| Permiso | Admin | Supervisor | Agente | Cliente | Solo lectura |
+|---------|:-----:|:----------:|:------:|:-------:|:------------:|
+| Ver todos los tickets | ✓ | ✓ depto | — | — | ✓ |
+| Crear ticket | ✓ | ✓ | ✓ | ✓ | — |
+| Asignar ticket | ✓ | ✓ | ✓ | — | — |
+| Notas internas | ✓ | ✓ | ✓ | — | ✓ |
+| Gestionar agentes | ✓ | ✓ depto | — | — | — |
+| Ver reportes | ✓ | ✓ | — | — | ✓ |
+| Config. sistema | ✓ | — | — | — | — |
+
+Definición en `src/lib/rbac/permissions.ts`. Middleware en `src/middleware.ts`.
+
+## Estructura del proyecto
+
+```
+TICKETS-UC/
+├── prisma/
+│   ├── schema.prisma
+│   ├── migrations/
+│   └── seed.ts
+├── src/
+│   ├── app/
+│   │   ├── (admin)/admin/       # Agentes, deptos, equipos, clientes
+│   │   ├── (agent)/agent/       # Panel de tickets
+│   │   ├── (auth)/login/
+│   │   ├── (portal)/portal/
+│   │   └── api/                 # REST + NextAuth
+│   ├── components/
+│   │   ├── ui/                  # shadcn/ui
+│   │   ├── tickets/
+│   │   └── admin/
+│   ├── modules/
+│   │   ├── tickets/             # Servicios, schemas, SLA utils
+│   │   └── users/               # Agentes, auth, deptos, equipos
+│   ├── lib/rbac/
+│   ├── config/                  # auth, routes, app
+│   └── middleware.ts
+├── .env.example
+└── vercel.json
+```
+
+## Inicio rápido (local)
+
+### 1. Variables de entorno
 
 ```bash
 cp .env.example .env
 ```
 
-3. En Supabase → **Project Settings** → **Database** → **Connection string**:
-   - **DATABASE_URL**: URI en modo **Transaction** (puerto `6543`). Añade `?pgbouncer=true` al final si no viene.
-   - **DIRECT_URL**: URI en modo **Session** (puerto `5432`).
+Completar al menos:
 
-4. Instala y aplica migraciones:
+- `DATABASE_URL` — Supabase Transaction pooler (puerto 6543) + `?pgbouncer=true`
+- `DIRECT_URL` — Supabase Session pooler (puerto 5432)
+- `NEXTAUTH_URL` — `http://localhost:3000`
+- `NEXTAUTH_SECRET` — generar con `openssl rand -base64 32`
+
+Opcional: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `REDIS_URL`, SMTP.
+
+### 2. Instalar y base de datos
 
 ```bash
 npm install
-npx prisma migrate deploy
+npx prisma db push          # o: npx prisma migrate deploy
+npm run db:seed
+```
+
+### 3. Desarrollo
+
+```bash
 npm run dev
 ```
 
-Abre [http://localhost:3000](http://localhost:3000).
+Abrir [http://localhost:3000](http://localhost:3000).
 
----
+### Usuarios de prueba (seed)
 
-## Desplegar en Supabase + Vercel
+| Email | Contraseña | Rol |
+|-------|------------|-----|
+| `admin@ucchristus.cl` | `Admin123!` | ADMIN |
+| `agente@ucchristus.cl` | `Admin123!` | AGENT |
 
-### 1. Supabase
+## Despliegue (Vercel + Supabase)
 
-1. [supabase.com](https://supabase.com) → **New project**.
-2. Guarda la contraseña de la base de datos.
-3. **Project Settings** → **Database** → **Connection string** → **URI**:
-   - Copia la URI **Transaction pooler** → será `DATABASE_URL` (debe incluir `?pgbouncer=true`).
-   - Copia la URI **Session pooler** → será `DIRECT_URL`.
-4. (Opcional) **SQL Editor** → pega y ejecuta `supabase/schema.sql` si no usarás migraciones de Prisma.
+1. Base de datos en [Supabase](https://supabase.com) con las dos URLs de conexión.
+2. Push a GitHub → Vercel importa el repo y despliega en cada push a `main`.
+3. En Vercel → **Environment Variables** (Production):
 
-### 2. Subir código a GitHub
+   - `DATABASE_URL`
+   - `DIRECT_URL`
+   - `NEXTAUTH_SECRET`
+   - `NEXTAUTH_URL` — URL pública (ej. `https://tickets-uc.vercel.app`)
 
-```bash
-git init
-git add .
-git commit -m "Tickets UC con Supabase y Vercel"
-git branch -M main
-git remote add origin https://github.com/TU_USUARIO/tickets-uc.git
-git push -u origin main
-```
+4. El build ejecuta `prisma generate && prisma migrate deploy && next build`.
 
-No subas `.env` (ya está en `.gitignore`).
-
-### 3. Vercel
-
-1. [vercel.com](https://vercel.com) → **Add New** → **Project** → importa el repo de GitHub.
-2. **Environment Variables** (Production, Preview y Development):
-
-| Variable       | Valor                                      |
-|----------------|--------------------------------------------|
-| `DATABASE_URL` | URI Transaction pooler + `?pgbouncer=true` |
-| `DIRECT_URL`   | URI Session pooler (puerto 5432)           |
-
-3. **Deploy**. El build ejecuta `prisma migrate deploy` y crea la tabla `Ticket`.
-
-### 4. Comprobar
-
-- Abre la URL de Vercel (ej. `https://tickets-uc.vercel.app`).
-- Registra un ticket y revisa en Supabase → **Table Editor** → `Ticket`.
-
----
-
-## Comandos
+## Comandos útiles
 
 | Comando | Descripción |
 |---------|-------------|
-| `npm run dev` | Desarrollo local |
-| `npm run db:migrate` | Aplicar migraciones a Supabase |
-| `npm run db:studio` | Explorar datos con Prisma Studio |
+| `npm run dev` | Servidor de desarrollo |
+| `npm run build` | Build de producción |
+| `npm run db:seed` | Datos iniciales (admin, agente, deptos) |
+| `npm run db:studio` | Explorar BD con Prisma Studio |
+| `npm run queue:worker` | Worker BullMQ (requiere `REDIS_URL`) |
 
-## Estructura
+## Próximos pasos
 
-- `src/components/TicketForm.tsx` — formulario
-- `src/app/api/tickets/route.ts` — API REST
-- `prisma/schema.prisma` — modelo y PostgreSQL
-- `prisma/migrations/` — migraciones para producción
+- Adjuntos en tickets (upload S3/local)
+- Configuración de sistema (`/admin/settings`) — política de contraseñas
+- Módulo Email / notificaciones
+- SLA y automatización
+- Base de conocimiento y reportes
+
+## Requisitos
+
+- Node.js ≥ 18.17
+- PostgreSQL 14+ (Supabase recomendado)
+- Redis opcional (colas y cache)

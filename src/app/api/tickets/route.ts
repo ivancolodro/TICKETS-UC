@@ -1,49 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { handleApiError } from "@/lib/api/errors";
+import { requireAgentContext } from "@/lib/api/agent-context";
+import { hasPermission } from "@/lib/rbac/check";
+import { Permission } from "@/lib/rbac/permissions";
+import {
+  createTicketSchema,
+  listTicketsSchema,
+} from "@/modules/tickets/schemas";
+import { createTicket, listTickets } from "@/modules/tickets/services/ticket.service";
 
-export async function GET() {
-  const tickets = await prisma.ticket.findMany({
-    orderBy: { createdAt: "desc" },
-  });
-  return NextResponse.json(tickets);
+export async function GET(request: NextRequest) {
+  try {
+    const ctx = await requireAgentContext();
+    if (!hasPermission(ctx.session.user.role, Permission.VER_TODOS_TICKETS) &&
+        !hasPermission(ctx.session.user.role, Permission.VER_TICKETS_DEPARTAMENTO)) {
+      throw new Error("FORBIDDEN");
+    }
+
+    const params = Object.fromEntries(request.nextUrl.searchParams);
+    const input = listTicketsSchema.parse(params);
+
+    const result = await listTickets(input, {
+      agentId: ctx.agentId,
+      departmentId: ctx.departmentId ?? undefined,
+    });
+
+    return NextResponse.json(result);
+  } catch (error) {
+    return handleApiError(error);
+  }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    const ctx = await requireAgentContext();
+    if (!hasPermission(ctx.session.user.role, Permission.CREAR_TICKET)) {
+      throw new Error("FORBIDDEN");
+    }
+
     const body = await request.json();
-    const { titulo, descripcion, solicitante, email, categoria, prioridad } =
-      body;
-
-    if (!titulo?.trim() || !descripcion?.trim() || !solicitante?.trim()) {
-      return NextResponse.json(
-        { error: "Título, descripción y solicitante son obligatorios." },
-        { status: 400 }
-      );
-    }
-
-    if (!email?.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return NextResponse.json(
-        { error: "Ingresa un correo electrónico válido." },
-        { status: 400 }
-      );
-    }
-
-    const ticket = await prisma.ticket.create({
-      data: {
-        titulo: titulo.trim(),
-        descripcion: descripcion.trim(),
-        solicitante: solicitante.trim(),
-        email: email.trim().toLowerCase(),
-        categoria: categoria?.trim() || "general",
-        prioridad: prioridad || "media",
-      },
+    const input = createTicketSchema.parse({
+      ...body,
+      channel: body.channel ?? "MANUAL",
     });
 
+    const ticket = await createTicket(input, ctx.userId);
     return NextResponse.json(ticket, { status: 201 });
-  } catch {
-    return NextResponse.json(
-      { error: "No se pudo guardar el ticket." },
-      { status: 500 }
-    );
+  } catch (error) {
+    return handleApiError(error);
   }
 }
