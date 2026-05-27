@@ -1,0 +1,21 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Ticket {
+  id          Int      @id @default(autoincrement())
+  titulo      String
+  descripcion String
+  solicitante String
+  email       String
+  categoria   String
+  prioridad   String   @default("media")
+  estado      String   @default("abierto")
+  createdAt   DateTime @default(now())
+}
