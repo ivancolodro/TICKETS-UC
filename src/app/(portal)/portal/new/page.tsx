@@ -23,9 +23,6 @@ export default async function PortalNewTicketPage() {
       <CreateTicketForm
         meta={{ departments, helpTopics }}
         apiEndpoint="/api/portal/tickets"
-        redirectPath={(t) =>
-          `/portal/tickets/${(t as { publicToken?: string }).publicToken ?? t.id}`
-        }
       />
     </div>
   );

@@ -24,13 +24,11 @@ type Meta = {
 type Props = {
   meta: Meta;
   apiEndpoint?: string;
-  redirectPath?: (ticket: { id: string }) => string;
 };
 
 export function CreateTicketForm({
   meta,
   apiEndpoint = "/api/tickets",
-  redirectPath = (t) => `/agent/tickets/${t.id}`,
 }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -70,8 +68,10 @@ export function CreateTicketForm({
 
       if (data.publicUrl) {
         router.push(data.publicUrl);
+      } else if (data.publicToken) {
+        router.push(`/portal/tickets/${data.publicToken}`);
       } else {
-        router.push(redirectPath(data));
+        router.push(`/agent/tickets/${data.id}`);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error");
